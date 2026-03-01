@@ -27,8 +27,8 @@ func (h *BillingHandler) CreateBill(ctx context.Context, req *model.CreateBillRe
 }
 
 // AddLineItem handles the AddLineItem API
-func (h *BillingHandler) AddLineItem(ctx context.Context, billID string, req *model.AddLineItemRequest) (*model.AddLineItemResponse, error) {
-	bill, err := h.svc.AddLineItem(billID, req)
+func (h *BillingHandler) AddLineItem(ctx context.Context, req *model.AddLineItemRequest) (*model.AddLineItemResponse, error) {
+	bill, err := h.svc.AddLineItem(req.BillID, req)
 	if err != nil {
 		return nil, err
 	}
