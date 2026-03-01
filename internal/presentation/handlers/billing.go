@@ -36,8 +36,8 @@ func (h *BillingHandler) AddLineItem(ctx context.Context, req *model.AddLineItem
 }
 
 // CloseBill handles the CloseBill API
-func (h *BillingHandler) CloseBill(ctx context.Context, billID string) (*model.CloseBillResponse, error) {
-	bill, err := h.svc.CloseBill(billID)
+func (h *BillingHandler) CloseBill(ctx context.Context, req *model.CloseBillRequest) (*model.CloseBillResponse, error) {
+	bill, err := h.svc.CloseBill(req.BillID)
 	if err != nil {
 		return nil, err
 	}
@@ -45,8 +45,8 @@ func (h *BillingHandler) CloseBill(ctx context.Context, billID string) (*model.C
 }
 
 // GetBill handles the GetBill API
-func (h *BillingHandler) GetBill(ctx context.Context, billID string) (*model.GetBillResponse, error) {
-	bill, err := h.svc.GetBill(billID)
+func (h *BillingHandler) GetBill(ctx context.Context, req *model.GetBillRequest) (*model.GetBillResponse, error) {
+	bill, err := h.svc.GetBill(req.BillID)
 	if err != nil {
 		return nil, err
 	}

@@ -27,13 +27,13 @@ func AddLineItem(ctx context.Context, req *model.AddLineItemRequest) (*model.Add
 }
 
 //encore:api public
-func CloseBill(ctx context.Context, billID string) (*model.CloseBillResponse, error) {
-	return handler.CloseBill(ctx, billID)
+func CloseBill(ctx context.Context, req *model.CloseBillRequest) (*model.CloseBillResponse, error) {
+	return handler.CloseBill(ctx, req)
 }
 
 //encore:api public
-func GetBill(ctx context.Context, billID string) (*model.GetBillResponse, error) {
-	return handler.GetBill(ctx, billID)
+func GetBill(ctx context.Context, req *model.GetBillRequest) (*model.GetBillResponse, error) {
+	return handler.GetBill(ctx, req)
 }
 
 //encore:api public
