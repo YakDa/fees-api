@@ -35,11 +35,11 @@ func (s *BillingService) CreateBill(req *model.CreateBillRequest) (*model.Bill, 
 	}
 
 	bill := &model.Bill{
-		ID:          generateID(),
-		Status:      model.BillStatusOpen,
-		Currency:    req.Currency,
-		LineItems:   []model.LineItem{},
-		CreatedAt:   time.Now().UTC(),
+		ID:        generateID(),
+		Status:    model.BillStatusOpen,
+		Currency:  req.Currency,
+		LineItems: []model.LineItem{},
+		CreatedAt: time.Now().UTC(),
 	}
 
 	if err := s.repo.Create(bill); err != nil {

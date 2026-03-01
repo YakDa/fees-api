@@ -20,12 +20,12 @@ const (
 
 // Bill represents a billing invoice
 type Bill struct {
-	ID          string      `json:"id"`
-	Status      BillStatus  `json:"status"`
-	Currency    Currency    `json:"currency"`
-	TotalAmount float64     `json:"totalAmount"`
+	ID          string     `json:"id"`
+	Status      BillStatus `json:"status"`
+	Currency    Currency   `json:"currency"`
+	TotalAmount float64    `json:"totalAmount"`
 	LineItems   []LineItem `json:"lineItems,omitempty"`
-	CreatedAt   time.Time   `json:"createdAt"`
+	CreatedAt   time.Time  `json:"createdAt"`
 	ClosedAt    *time.Time `json:"closedAt,omitempty"`
 }
 
@@ -50,9 +50,8 @@ type CreateBillResponse struct {
 
 // AddLineItemRequest represents the request to add a line item
 type AddLineItemRequest struct {
-	BillID      string  `query:"billId"`
-	Description string  `json:"description"`
-	Amount      float64 `json:"amount"`
+	Description string   `json:"description"`
+	Amount      float64  `json:"amount"`
 	Currency    Currency `json:"currency"`
 }
 
