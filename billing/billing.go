@@ -16,27 +16,27 @@ var (
 	handler = handlers.NewBillingHandler(svc)
 )
 
-//encore:api public
+//encore:api public path=/bills
 func CreateBill(ctx context.Context, req *model.CreateBillRequest) (*model.CreateBillResponse, error) {
 	return handler.CreateBill(ctx, req)
 }
 
-//encore:api public
+//encore:api public path=/bills/:id/items
 func AddLineItem(ctx context.Context, req *model.AddLineItemRequest) (*model.AddLineItemResponse, error) {
 	return handler.AddLineItem(ctx, req)
 }
 
-//encore:api public
+//encore:api public path=/bills/:id/close
 func CloseBill(ctx context.Context, req *model.CloseBillRequest) (*model.CloseBillResponse, error) {
 	return handler.CloseBill(ctx, req)
 }
 
-//encore:api public
+//encore:api public path=/bills/:id
 func GetBill(ctx context.Context, req *model.GetBillRequest) (*model.GetBillResponse, error) {
 	return handler.GetBill(ctx, req)
 }
 
-//encore:api public
+//encore:api public path=/bills
 func ListBills(ctx context.Context, req *model.ListBillsRequest) (*model.ListBillsResponse, error) {
 	return handler.ListBills(ctx, req)
 }
