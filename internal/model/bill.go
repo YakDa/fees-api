@@ -50,6 +50,7 @@ type CreateBillResponse struct {
 
 // AddLineItemRequest represents the request to add a line item
 type AddLineItemRequest struct {
+	BillID      string  `query:"billId"`
 	Description string  `json:"description"`
 	Amount      float64 `json:"amount"`
 	Currency    Currency `json:"currency"`
