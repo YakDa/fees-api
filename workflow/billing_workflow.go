@@ -14,30 +14,28 @@ import (
 type BillingPeriodWorkflow struct{}
 
 const (
-	// Signal to add a line item
-	AddLineItemSignal = "add-line-item"
-	// Signal to close the bill
-	CloseBillSignal = "close-bill"
-	// Query to get current bill state
-	BillStateQuery = "bill-state"
+	// Signal channel names
+	addLineItemSignalName = "add-line-item"
+	closeBillSignalName   = "close-bill"
+	billStateQueryName   = "bill-state"
 )
 
 // BillState represents the current state of a bill in the workflow
 type BillState struct {
-	BillID        string    `json:"billId"`
-	Status        string    `json:"status"`
-	Currency      string    `json:"currency"`
-	TotalAmount   float64   `json:"totalAmount"`
-	LineItemCount int       `json:"lineItemCount"`
-	StartedAt     time.Time `json:"startedAt"`
+	BillID        string     `json:"billId"`
+	Status        string     `json:"status"`
+	Currency      string     `json:"currency"`
+	TotalAmount   float64    `json:"totalAmount"`
+	LineItemCount int        `json:"lineItemCount"`
+	StartedAt     time.Time  `json:"startedAt"`
 	ClosedAt      *time.Time `json:"closedAt,omitempty"`
 }
 
 // BillingPeriodInput is the input for starting the billing period workflow
 type BillingPeriodInput struct {
-	BillID            string        `json:"billId"`
-	Currency          string        `json:"currency"`
-	BillingPeriodDays int           `json:"billingPeriodDays"` // e.g., 30 for monthly
+	BillID            string `json:"billId"`
+	Currency          string `json:"currency"`
+	BillingPeriodDays int    `json:"billingPeriodDays"` // e.g., 30 for monthly
 }
 
 // RunBillingPeriodWorkflow is the main workflow function
@@ -56,8 +54,8 @@ func RunBillingPeriodWorkflow(ctx workflow.Context, input BillingPeriodInput) er
 	billingPeriodTimer := workflow.NewTimer(ctx, time.Duration(input.BillingPeriodDays)*24*time.Hour)
 
 	// Channel for receiving signals
-	addLineItemChan := workflow.GetSignalChannel(ctx, AddLineItemSignal)
-	closeBillChan := workflow.GetSignalChannel(ctx, CloseBillSignal)
+	addLineItemChan := workflow.GetSignalChannel(ctx, addLineItemSignalName)
+	closeBillChan := workflow.GetSignalChannel(ctx, closeBillSignalName)
 
 	selector := workflow.NewSelector(ctx)
 	selector.AddFuture(billingPeriodTimer, func(f workflow.Future) {
@@ -89,7 +87,7 @@ func RunBillingPeriodWorkflow(ctx workflow.Context, input BillingPeriodInput) er
 	})
 
 	// Register query handler
-	err := workflow.SetQueryHandler(ctx, BillStateQuery, func() (BillState, error) {
+	err := workflow.SetQueryHandler(ctx, billStateQueryName, func() (BillState, error) {
 		return state, nil
 	})
 	if err != nil {
@@ -107,16 +105,6 @@ func RunBillingPeriodWorkflow(ctx workflow.Context, input BillingPeriodInput) er
 		state.BillID, state.TotalAmount, state.Currency)
 
 	return nil
-}
-
-// TemporalWorkflowOptions returns the workflow options for billing period
-func TemporalWorkflowOptions(billID string) workflow.Options {
-	return workflow.Options{
-		TaskQueue:           "billing",
-		ID:                  fmt.Sprintf("billing-period-%s", billID),
-		ExecutionStartToCloseTimeout: 365 * 24 * time.Hour, // 1 year max
-		WorkflowIDReusePolicy: workflow.WorkflowIDReusePolicyAllowDuplicate,
-	}
 }
 
 // AddLineItemSignal is the signal to add a line item to the bill
@@ -150,3 +138,6 @@ func GetBillingPeriodState(ctx context.Context, workflowID string) (*BillState, 
 	// This would query the workflow state
 	return nil, fmt.Errorf("not implemented")
 }
+
+// NOTE: Workflow options should be configured when starting the workflow
+// via the Temporal client. The specific API depends on the Temporal SDK version.
