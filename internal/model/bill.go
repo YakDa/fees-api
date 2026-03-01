@@ -50,6 +50,7 @@ type CreateBillResponse struct {
 
 // AddLineItemRequest represents the request to add a line item
 type AddLineItemRequest struct {
+	BillID      string  `query:"billId"`
 	Description string  `json:"description"`
 	Amount      float64 `json:"amount"`
 	Currency    Currency `json:"currency"`
@@ -60,9 +61,19 @@ type AddLineItemResponse struct {
 	Bill Bill `json:"bill"`
 }
 
+// CloseBillRequest represents the request to close a bill
+type CloseBillRequest struct {
+	BillID string `query:"billId"`
+}
+
 // CloseBillResponse represents the response from closing a bill
 type CloseBillResponse struct {
 	Bill Bill `json:"bill"`
+}
+
+// GetBillRequest represents the request to get a bill
+type GetBillRequest struct {
+	BillID string `query:"billId"`
 }
 
 // GetBillResponse represents the response from getting a bill
