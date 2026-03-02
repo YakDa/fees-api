@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	"fmt"
 	"time"
 
@@ -17,12 +18,27 @@ var exchangeRates = map[model.Currency]float64{
 
 // BillingService handles business logic for billing
 type BillingService struct {
-	repo repository.BillRepository
+	repo              repository.BillRepository
+	useTemporal       bool
+	billingPeriodDays int
 }
 
 // NewBillingService creates a new billing service
 func NewBillingService(repo repository.BillRepository) *BillingService {
-	return &BillingService{repo: repo}
+	return &BillingService{
+		repo:              repo,
+		useTemporal:       false, // Disabled by default
+		billingPeriodDays: 30,     // Default 30 days
+	}
+}
+
+// NewBillingServiceWithTemporal creates a billing service with Temporal integration
+func NewBillingServiceWithTemporal(repo repository.BillRepository, billingPeriodDays int) *BillingService {
+	return &BillingService{
+		repo:              repo,
+		useTemporal:       true,
+		billingPeriodDays: billingPeriodDays,
+	}
 }
 
 // CreateBill creates a new bill
@@ -127,6 +143,63 @@ func (s *BillingService) GetBill(billID string) (*model.Bill, error) {
 // ListBills lists all bills, optionally filtered by status
 func (s *BillingService) ListBills(status string) ([]model.Bill, error) {
 	return s.repo.List(status)
+}
+
+// ============ HTTP Handlers (for Encore API) ============
+
+// BillingHandler handles HTTP requests for billing
+type BillingHandler struct {
+	svc *BillingService
+}
+
+// NewBillingHandler creates a new billing handler
+func NewBillingHandler(svc *BillingService) *BillingHandler {
+	return &BillingHandler{svc: svc}
+}
+
+// CreateBill handles the CreateBill API
+func (h *BillingHandler) CreateBill(ctx context.Context, req *model.CreateBillRequest) (*model.CreateBillResponse, error) {
+	bill, err := h.svc.CreateBill(req)
+	if err != nil {
+		return nil, err
+	}
+	return &model.CreateBillResponse{Bill: *bill}, nil
+}
+
+// AddLineItem handles the AddLineItem API
+func (h *BillingHandler) AddLineItem(ctx context.Context, billID string, req *model.AddLineItemRequest) (*model.AddLineItemResponse, error) {
+	bill, err := h.svc.AddLineItem(billID, req)
+	if err != nil {
+		return nil, err
+	}
+	return &model.AddLineItemResponse{Bill: *bill}, nil
+}
+
+// CloseBill handles the CloseBill API
+func (h *BillingHandler) CloseBill(ctx context.Context, billID string) (*model.CloseBillResponse, error) {
+	bill, err := h.svc.CloseBill(billID)
+	if err != nil {
+		return nil, err
+	}
+	return &model.CloseBillResponse{Bill: *bill}, nil
+}
+
+// GetBill handles the GetBill API
+func (h *BillingHandler) GetBill(ctx context.Context, billID string) (*model.GetBillResponse, error) {
+	bill, err := h.svc.GetBill(billID)
+	if err != nil {
+		return nil, err
+	}
+	return &model.GetBillResponse{Bill: *bill}, nil
+}
+
+// ListBills handles the ListBills API
+func (h *BillingHandler) ListBills(ctx context.Context, req *model.ListBillsRequest) (*model.ListBillsResponse, error) {
+	bills, err := h.svc.ListBills(req.Status)
+	if err != nil {
+		return nil, err
+	}
+	return &model.ListBillsResponse{Bills: bills}, nil
 }
 
 // ConvertToUSD converts an amount from one currency to USD
