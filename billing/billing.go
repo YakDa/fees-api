@@ -3,8 +3,8 @@ package billing
 import (
 	"context"
 
+	"fees-api/internal/handlers"
 	"fees-api/internal/model"
-	"fees-api/internal/presentation/handlers"
 	"fees-api/internal/repository"
 	"fees-api/internal/service"
 )
