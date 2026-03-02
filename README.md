@@ -37,7 +37,7 @@ fees-api/
 
 ### Create Bill
 ```bash
-POST /billing.CreateBill
+POST /bills
 {
   "currency": "USD"  # or "GEL"
 }
@@ -45,7 +45,7 @@ POST /billing.CreateBill
 
 ### Add Line Item
 ```bash
-POST /billing.AddLineItem?billId={bill_id}
+POST /bills/:billID/items
 {
   "description": "Service fee",
   "amount": 10.00,
@@ -55,18 +55,18 @@ POST /billing.AddLineItem?billId={bill_id}
 
 ### Close Bill
 ```bash
-POST /billing.CloseBill?billId={bill_id}
+POST /bills/:billID/close
 ```
 
 ### Get Bill
 ```bash
-GET /billing.GetBill?billId={bill_id}
+GET /bills/:billID
 ```
 
 ### List Bills
 ```bash
-GET /billing.ListBills?status=open
-GET /billing.ListBills?status=closed
+GET /bills?status=open
+GET /bills?status=closed
 ```
 
 ## Features
