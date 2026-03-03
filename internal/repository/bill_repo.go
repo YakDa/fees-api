@@ -60,7 +60,7 @@ func (r *InMemoryBillRepository) Update(bill *model.Bill) error {
 func (r *InMemoryBillRepository) List(status string) ([]model.Bill, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
-	
+
 	var result []model.Bill
 	for _, bill := range r.bills {
 		if status != "" && string(bill.Status) != status {

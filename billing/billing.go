@@ -3,7 +3,6 @@ package billing
 import (
 	"context"
 
-	"fees-api/internal/handlers"
 	"fees-api/internal/model"
 	"fees-api/internal/repository"
 	"fees-api/internal/service"
@@ -13,7 +12,7 @@ import (
 var (
 	repo    = repository.NewInMemoryBillRepository()
 	svc     = service.NewBillingService(repo)
-	handler = handlers.NewBillingHandler(svc)
+	handler = service.NewBillingHandler(svc)
 )
 
 //encore:api public method=POST path=/bills
@@ -40,3 +39,23 @@ func GetBill(ctx context.Context, billID string) (*model.GetBillResponse, error)
 func ListBills(ctx context.Context, req *model.ListBillsRequest) (*model.ListBillsResponse, error) {
 	return handler.ListBills(ctx, req)
 }
+
+// TODO: Add Temporal integration endpoints
+//
+// To enable Temporal workflows:
+//
+// 1. Start Temporal local server:
+//    ./tools/temporalite_0.3.0_darwin_arm64/temporalite start -n default
+//
+// 2. Initialize Temporal client in billing service
+//
+// 3. Add endpoints to start/complete workflows:
+//
+// //encore:api public method=POST path=/bills/:billID/workflow
+// func StartBillingWorkflow(ctx context.Context, billID string, req *model.StartWorkflowRequest) (*model.StartWorkflowResponse, error) {
+//     workflowID, err := temporalManager.StartBillingPeriod(ctx, billID, req.Currency, req.BillingPeriodDays)
+//     if err != nil {
+//         return nil, err
+//     }
+//     return &model.StartWorkflowResponse{WorkflowID: workflowID}, nil
+// }
