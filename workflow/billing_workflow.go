@@ -17,7 +17,7 @@ const (
 	// Signal channel names
 	addLineItemSignalName = "add-line-item"
 	closeBillSignalName   = "close-bill"
-	billStateQueryName    = "bill-state"
+	billStateQueryName   = "bill-state"
 )
 
 // BillState represents the current state of a bill in the workflow

@@ -50,10 +50,10 @@ func (m *mockBillRepository) List(status string) ([]model.Bill, error) {
 
 func TestCreateBill(t *testing.T) {
 	tests := []struct {
-		name      string
-		currency  model.Currency
-		wantErr   bool
-		checkBill func(*testing.T, *model.Bill)
+		name        string
+		currency    model.Currency
+		wantErr     bool
+		checkBill   func(*testing.T, *model.Bill)
 	}{
 		{
 			name:     "creates bill with USD",
@@ -92,9 +92,9 @@ func TestCreateBill(t *testing.T) {
 			},
 		},
 		{
-			name:      "rejects unsupported currency",
-			currency:  "EUR",
-			wantErr:   true,
+			name:     "rejects unsupported currency",
+			currency: "EUR",
+			wantErr:  true,
 			checkBill: nil,
 		},
 	}
@@ -121,11 +121,11 @@ func TestCreateBill(t *testing.T) {
 
 func TestAddLineItem(t *testing.T) {
 	tests := []struct {
-		name      string
-		setupBill func(*BillingService) string
-		req       *model.AddLineItemRequest
-		wantErr   bool
-		checkBill func(*testing.T, *model.Bill)
+		name        string
+		setupBill   func(*BillingService) string
+		req         *model.AddLineItemRequest
+		wantErr     bool
+		checkBill   func(*testing.T, *model.Bill)
 	}{
 		{
 			name: "adds line item successfully",
@@ -179,7 +179,7 @@ func TestAddLineItem(t *testing.T) {
 				Amount:      10.00,
 				Currency:    model.CurrencyUSD,
 			},
-			wantErr:   true,
+			wantErr: true,
 			checkBill: nil,
 		},
 		{
@@ -192,7 +192,7 @@ func TestAddLineItem(t *testing.T) {
 				Amount:      10.00,
 				Currency:    model.CurrencyUSD,
 			},
-			wantErr:   true,
+			wantErr: true,
 			checkBill: nil,
 		},
 	}
@@ -337,10 +337,10 @@ func TestGetBill(t *testing.T) {
 
 func TestListBills(t *testing.T) {
 	tests := []struct {
-		name       string
+		name      string
 		setupBills func(*BillingService)
-		status     string
-		wantCount  int
+		status    string
+		wantCount int
 	}{
 		{
 			name: "lists all bills",
