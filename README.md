@@ -17,7 +17,7 @@ fees-api/
 ├── cmd/api/                    # Entry point (Encore)
 ├── internal/
 │   ├── model/                  # Data models
-│   ├── presentation/handlers/  # API handlers
+│   ├── handlers/               # API handlers
 │   ├── service/                # Business logic
 │   └── repository/             # Data access
 ├── pkg/errors/                 # Error types
