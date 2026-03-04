@@ -20,7 +20,7 @@ type Service struct {
 }
 
 var (
-	billingService Service
+	billingService *Service
 )
 
 // Task queue name
@@ -67,12 +67,47 @@ func (s *Service) Shutdown(ctx context.Context) {
 
 // GetService returns the billing service (lazy initialization)
 func GetService() *Service {
-	if billingService.client == nil {
+	if billingService == nil {
 		svc, err := initService()
 		if err != nil {
 			panic(fmt.Sprintf("failed to init billing service: %v", err))
 		}
-		billingService = *svc
+		billingService = svc
 	}
-	return &billingService
+	return billingService
+}
+
+// startWorkflow starts a billing period workflow for a bill
+func (s *Service) startWorkflow(ctx context.Context, billID, currency string, billingPeriodDays int) error {
+	input := workflow.BillingPeriodInput{
+		BillID:            billID,
+		Currency:          currency,
+		BillingPeriodDays: billingPeriodDays,
+	}
+
+	workflowID := "billing-period-" + billID
+
+	_, err := s.client.ExecuteWorkflow(ctx, client.StartWorkflowOptions{
+		ID:        workflowID,
+		TaskQueue: taskQueueName,
+	}, workflow.BillingPeriodWorkflow, input)
+
+	return err
+}
+
+// signalAddItem signals the workflow to add a line item
+func (s *Service) signalAddItem(ctx context.Context, billID string, amount float64, currency string) error {
+	workflowID := "billing-period-" + billID
+
+	return s.client.SignalWorkflow(ctx, workflowID, "", "add-line-item", workflow.AddLineItemSignalInput{
+		Amount:   amount,
+		Currency: currency,
+	})
+}
+
+// signalCloseBill signals the workflow to close the bill
+func (s *Service) signalCloseBill(ctx context.Context, billID string) error {
+	workflowID := "billing-period-" + billID
+
+	return s.client.SignalWorkflow(ctx, workflowID, "", "close-bill", nil)
 }
