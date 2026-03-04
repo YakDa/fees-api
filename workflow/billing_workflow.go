@@ -2,23 +2,17 @@ package workflow
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"go.temporal.io/sdk/workflow"
 )
 
-// BillingPeriodWorkflow manages the lifecycle of a billing period
-// This workflow is started at the beginning of a fee period
-// and allows for progressive accrual of fees
-type BillingPeriodWorkflow struct{}
-
-const (
-	// Signal channel names
-	addLineItemSignalName = "add-line-item"
-	closeBillSignalName   = "close-bill"
-	billStateQueryName   = "bill-state"
-)
+// BillingPeriodInput is the input for starting the billing period workflow
+type BillingPeriodInput struct {
+	BillID            string `json:"billId"`
+	Currency          string `json:"currency"`
+	BillingPeriodDays int    `json:"billingPeriodDays"`
+}
 
 // BillState represents the current state of a bill in the workflow
 type BillState struct {
@@ -31,16 +25,15 @@ type BillState struct {
 	ClosedAt      *time.Time `json:"closedAt,omitempty"`
 }
 
-// BillingPeriodInput is the input for starting the billing period workflow
-type BillingPeriodInput struct {
-	BillID            string `json:"billId"`
-	Currency          string `json:"currency"`
-	BillingPeriodDays int    `json:"billingPeriodDays"` // e.g., 30 for monthly
+// AddLineItemSignalInput is the input for adding a line item signal
+type AddLineItemSignalInput struct {
+	Amount   float64 `json:"amount"`
+	Currency string  `json:"currency"`
 }
 
-// RunBillingPeriodWorkflow is the main workflow function
-func RunBillingPeriodWorkflow(ctx workflow.Context, input BillingPeriodInput) error {
-	// Initialize the bill state
+// BillingPeriodWorkflow manages the lifecycle of a billing period
+func BillingPeriodWorkflow(ctx workflow.Context, input BillingPeriodInput) error {
+	// Initialize state
 	state := BillState{
 		BillID:        input.BillID,
 		Status:        "open",
@@ -50,94 +43,73 @@ func RunBillingPeriodWorkflow(ctx workflow.Context, input BillingPeriodInput) er
 		StartedAt:     workflow.Now(ctx),
 	}
 
-	// Set up a timer for the billing period end
-	billingPeriodTimer := workflow.NewTimer(ctx, time.Duration(input.BillingPeriodDays)*24*time.Hour)
+	// Set up timer for billing period end
+	timerFuture := workflow.NewTimer(ctx, time.Duration(input.BillingPeriodDays)*24*time.Hour)
 
-	// Channel for receiving signals
-	addLineItemChan := workflow.GetSignalChannel(ctx, addLineItemSignalName)
-	closeBillChan := workflow.GetSignalChannel(ctx, closeBillSignalName)
+	// Set up signal channels
+	addLineItemChan := workflow.GetSignalChannel(ctx, "add-line-item")
+	closeBillChan := workflow.GetSignalChannel(ctx, "close-bill")
 
+	// Selector for handling events
 	selector := workflow.NewSelector(ctx)
-	selector.AddFuture(billingPeriodTimer, func(f workflow.Future) {
-		// Billing period ended - close the bill automatically
+	selector.AddFuture(timerFuture, func(f workflow.Future) {
+		// Timer fired - close the bill
 		state.Status = "closed"
 		now := workflow.Now(ctx)
 		state.ClosedAt = &now
 	})
 	selector.AddReceive(addLineItemChan, func(c workflow.ReceiveChannel, more bool) {
-		var lineItem struct {
-			Amount   float64 `json:"amount"`
-			Currency string  `json:"currency"`
-		}
-		c.Receive(ctx, &lineItem)
+		var signalInput AddLineItemSignalInput
+		c.Receive(ctx, &signalInput)
 
-		// Add the line item to the bill
-		// In a real implementation, this would call the Encore API
+		// Execute activity to add line item
 		state.LineItemCount++
-		if lineItem.Currency == state.Currency {
-			state.TotalAmount += lineItem.Amount
-		}
-		// Note: Currency conversion would be handled by the API
+		state.TotalAmount += signalInput.Amount
 	})
 	selector.AddReceive(closeBillChan, func(c workflow.ReceiveChannel, more bool) {
-		var _ struct{} // Empty signal
 		state.Status = "closed"
 		now := workflow.Now(ctx)
 		state.ClosedAt = &now
 	})
 
 	// Register query handler
-	err := workflow.SetQueryHandler(ctx, billStateQueryName, func() (BillState, error) {
+	workflow.SetQueryHandler(ctx, "bill-state", func() (BillState, error) {
 		return state, nil
 	})
-	if err != nil {
-		return err
-	}
 
-	// Wait until either the billing period ends or the bill is closed
+	// Wait until closed
 	for state.Status == "open" {
 		selector.Select(ctx)
 	}
 
-	// Workflow complete - the bill is now closed
-	// In production, this would trigger final invoice generation
-	fmt.Printf("Billing period complete for bill %s: total amount %.2f %s\n",
-		state.BillID, state.TotalAmount, state.Currency)
-
 	return nil
 }
 
-// AddLineItemSignal is the signal to add a line item to the bill
-type AddLineItemSignal struct {
-	Amount   float64 `json:"amount"`
-	Currency string  `json:"currency"`
+// ============ Activities ============
+
+// ActivityInput represents input for activities
+type ActivityInput struct {
+	BillID      string  `json:"billId"`
+	Amount      float64 `json:"amount"`
+	Currency    string  `json:"currency"`
+	Description string  `json:"description"`
 }
 
-// CloseBillSignal is the signal to close the bill
-type CloseBillSignal struct{}
-
-// BillingPeriodActivity handles the actual bill operations
-// In production, these would call the Encore APIs
-type BillingPeriodActivity struct{}
-
-// CreateBillingPeriod creates a new billing period workflow
-func CreateBillingPeriod(ctx context.Context, input BillingPeriodInput) (string, error) {
-	// This would be implemented using Temporal client
-	// In production, use temporalClient.StartWorkflow(ctx, options, RunBillingPeriodWorkflow, input)
-	return fmt.Sprintf("billing-period-%s", input.BillID), nil
+// CreateBillingActivity creates a billing period
+func CreateBillingActivity(ctx context.Context, input ActivityInput) (string, error) {
+	// This would call the Encore API to create a bill
+	// For now, return the workflow ID
+	return input.BillID, nil
 }
 
-// CloseBillingPeriod closes an existing billing period
-func CloseBillingPeriod(ctx context.Context, workflowID string) error {
-	// This would signal the workflow to close
+// AddLineItemActivity adds a line item
+func AddLineItemActivity(ctx context.Context, input ActivityInput) error {
+	// This would call the Encore API to add a line item
 	return nil
 }
 
-// GetBillingPeriodState queries the current state of a billing period
-func GetBillingPeriodState(ctx context.Context, workflowID string) (*BillState, error) {
-	// This would query the workflow state
-	return nil, fmt.Errorf("not implemented")
+// CloseBillActivity closes a bill
+func CloseBillActivity(ctx context.Context, input ActivityInput) error {
+	// This would call the Encore API to close the bill
+	return nil
 }
-
-// NOTE: Workflow options should be configured when starting the workflow
-// via the Temporal client. The specific API depends on the Temporal SDK version.
