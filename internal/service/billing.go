@@ -2,6 +2,7 @@ package service
 
 import (
 	"fmt"
+	"math"
 	"time"
 
 	"fees-api/internal/model"
@@ -9,8 +10,8 @@ import (
 	billingerrors "fees-api/pkg/errors"
 )
 
-// Exchange rates (in production, this would come from an external service)
-var exchangeRates = map[model.Currency]float64{
+// Exchange rates to USD (base currency)
+var exchangeRatesToUSD = map[model.Currency]float64{
 	model.CurrencyGEL: 0.37, // 1 GEL = 0.37 USD
 	model.CurrencyUSD: 1.0,
 }
@@ -51,6 +52,17 @@ func (s *BillingService) CreateBill(req *model.CreateBillRequest) (*model.Bill, 
 
 // AddLineItem adds a line item to a bill
 func (s *BillingService) AddLineItem(billID string, req *model.AddLineItemRequest) (*model.Bill, error) {
+	// Input validation
+	if req.Description == "" {
+		return nil, fmt.Errorf("description is required")
+	}
+	if len(req.Description) > 500 {
+		return nil, fmt.Errorf("description too long (max 500 characters)")
+	}
+	if req.Amount <= 0 {
+		return nil, fmt.Errorf("amount must be positive")
+	}
+
 	bill, err := s.repo.Get(billID)
 	if err != nil {
 		return nil, err
@@ -67,10 +79,13 @@ func (s *BillingService) AddLineItem(billID string, req *model.AddLineItemReques
 		return nil, billingerrors.UnsupportedCurrency(string(req.Currency))
 	}
 
+	// Convert float64 to int64 cents to avoid floating point errors
+	amountCents := floatToCents(req.Amount)
+
 	lineItem := model.LineItem{
 		ID:          generateID(),
 		Description: req.Description,
-		Amount:      req.Amount,
+		Amount:      amountCents,
 		Currency:    req.Currency,
 		CreatedAt:   time.Now().UTC(),
 	}
@@ -78,7 +93,7 @@ func (s *BillingService) AddLineItem(billID string, req *model.AddLineItemReques
 	bill.LineItems = append(bill.LineItems, lineItem)
 
 	// Update total amount (normalized to bill's currency)
-	bill.TotalAmount = s.convertAndAdd(bill.TotalAmount, bill.Currency, req.Amount, req.Currency)
+	bill.TotalAmount = s.convertAndAdd(bill.TotalAmount, bill.Currency, amountCents, req.Currency)
 
 	if err := s.repo.Update(bill); err != nil {
 		return nil, err
@@ -129,23 +144,37 @@ func (s *BillingService) ListBills(status string) ([]model.Bill, error) {
 	return s.repo.List(status)
 }
 
-// ConvertToUSD converts an amount from one currency to USD
-func (s *BillingService) ConvertToUSD(amount float64, currency model.Currency) float64 {
+// ConvertToUSD converts amount (in cents) from one currency to USD cents
+func (s *BillingService) ConvertToUSD(amountCents int64, currency model.Currency) int64 {
 	if currency == model.CurrencyUSD {
-		return amount
+		return amountCents
 	}
-	return amount * exchangeRates[model.CurrencyGEL]
+	// Convert GEL cents to USD cents using exchange rate
+	usdFloat := float64(amountCents) * exchangeRatesToUSD[model.CurrencyGEL]
+	return int64(math.Round(usdFloat))
 }
 
-// convertAndAdd converts amount to bill's currency and adds to total
-func (s *BillingService) convertAndAdd(total float64, billCurrency model.Currency, amount float64, amountCurrency model.Currency) float64 {
+// convertAndAdd converts amount (in cents) to bill's currency and adds to total (also in cents)
+func (s *BillingService) convertAndAdd(totalCents int64, billCurrency model.Currency, amountCents int64, amountCurrency model.Currency) int64 {
 	if billCurrency == amountCurrency {
-		return total + amount
+		return totalCents + amountCents
 	}
-	// Convert amount to USD first, then to bill's currency
-	usdAmount := s.ConvertToUSD(amount, amountCurrency)
-	// Assume 1:1 for USD to bill currency (simplified)
-	return total + usdAmount
+	// Convert amount to USD cents first, then to bill's currency
+	usdCents := s.ConvertToUSD(amountCents, amountCurrency)
+	
+	// Convert from USD to bill's currency
+	if billCurrency == model.CurrencyUSD {
+		return totalCents + usdCents
+	}
+	
+	// USD to GEL: divide by rate (1 GEL = 0.37 USD, so 1 USD = 1/0.37 GEL)
+	gelFloat := float64(usdCents) / exchangeRatesToUSD[model.CurrencyGEL]
+	return totalCents + int64(math.Round(gelFloat))
+}
+
+// floatToCents converts a float64 dollar amount to int64 cents
+func floatToCents(amount float64) int64 {
+	return int64(math.Round(amount * 100))
 }
 
 // generateID generates a unique ID
