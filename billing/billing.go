@@ -15,8 +15,14 @@ func CreateBill(ctx context.Context, req *model.CreateBillRequest) (*model.Creat
 		return nil, err
 	}
 
+	// Default to 30 days if not specified
+	billingPeriodDays := req.BillingPeriodDays
+	if billingPeriodDays <= 0 {
+		billingPeriodDays = 30
+	}
+
 	// Automatically start the billing workflow
-	_ = svc.startWorkflow(ctx, bill.ID, string(bill.Currency), 30)
+	_ = svc.startWorkflow(ctx, bill.ID, string(bill.Currency), billingPeriodDays)
 
 	return &model.CreateBillResponse{Bill: *bill}, nil
 }
