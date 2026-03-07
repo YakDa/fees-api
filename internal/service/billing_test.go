@@ -143,8 +143,9 @@ func TestAddLineItem(t *testing.T) {
 				if len(bill.LineItems) != 1 {
 					t.Errorf("expected 1 line item, got %d", len(bill.LineItems))
 				}
-				if bill.TotalAmount != 10.00 {
-					t.Errorf("expected total 10.00, got %f", bill.TotalAmount)
+				// Amount stored in cents: 10.00 * 100 = 1000
+				if bill.TotalAmount != 1000 {
+					t.Errorf("expected total 1000 cents, got %d", bill.TotalAmount)
 				}
 			},
 		},
@@ -161,9 +162,9 @@ func TestAddLineItem(t *testing.T) {
 			},
 			wantErr: false,
 			checkBill: func(t *testing.T, bill *model.Bill) {
-				// 100 GEL * 0.37 = 37 USD
-				if bill.TotalAmount != 37.0 {
-					t.Errorf("expected 37.0, got %f", bill.TotalAmount)
+				// 100 GEL * 0.37 = 37 USD = 3700 cents
+				if bill.TotalAmount != 3700 {
+					t.Errorf("expected 3700, got %d", bill.TotalAmount)
 				}
 			},
 		},
