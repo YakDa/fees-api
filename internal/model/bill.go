@@ -23,7 +23,7 @@ type Bill struct {
 	ID          string     `json:"id"`
 	Status      BillStatus `json:"status"`
 	Currency    Currency   `json:"currency"`
-	TotalAmount float64    `json:"totalAmount"`
+	TotalAmount int64      `json:"totalAmount"` // stored in cents
 	LineItems   []LineItem `json:"lineItems,omitempty"`
 	CreatedAt   time.Time  `json:"createdAt"`
 	ClosedAt    *time.Time `json:"closedAt,omitempty"`
@@ -33,7 +33,7 @@ type Bill struct {
 type LineItem struct {
 	ID          string    `json:"id"`
 	Description string    `json:"description"`
-	Amount      float64   `json:"amount"`
+	Amount      int64     `json:"amount"` // stored in cents
 	Currency    Currency  `json:"currency"`
 	CreatedAt   time.Time `json:"createdAt"`
 }
@@ -50,8 +50,8 @@ type CreateBillResponse struct {
 
 // AddLineItemRequest represents the request to add a line item
 type AddLineItemRequest struct {
-	Description string   `json:"description"`
-	Amount      float64  `json:"amount"`
+	Description string  `json:"description"`
+	Amount      float64 `json:"amount"` // accept float for human-friendly input, store as cents
 	Currency    Currency `json:"currency"`
 }
 
