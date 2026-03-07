@@ -40,7 +40,8 @@ type LineItem struct {
 
 // CreateBillRequest represents the request to create a new bill
 type CreateBillRequest struct {
-	Currency Currency `json:"currency"`
+	Currency          Currency `json:"currency"`
+	BillingPeriodDays int      `json:"billingPeriodDays"` // defaults to 30 if not specified
 }
 
 // CreateBillResponse represents the response from creating a bill
