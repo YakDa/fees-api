@@ -39,7 +39,8 @@ fees-api/
 ```bash
 POST /bills
 {
-  "currency": "USD"  # or "GEL"
+  "currency": "USD",           # or "GEL"
+  "billingPeriodDays": 30     # optional, defaults to 30
 }
 ```
 
@@ -71,38 +72,41 @@ GET /bills?status=closed
 
 ## Features
 
-- Create new bills
+- Create new bills with configurable billing period
 - Add line items to open bills
 - Close active bills (shows total + line items)
 - Reject line items on closed bills
 - Query open and closed bills
 - Multi-currency support (GEL, USD)
 - Currency conversion for totals
-- Temporal workflow for billing periods
-- Event-driven architecture
+- Temporal workflow for billing periods with auto-close
+- Unit tests for core business logic
 
 ## Running Locally
 
 ```bash
-# Install Encore CLI
+# Start Temporal (required)
+./tools/temporalite_0.3.0_darwin_arm64/temporalite start --namespace default
+
+# Start Encore
 encore run
 ```
 
 ## Design Decisions
 
 ### Money Representation
-- Amounts stored as float64 for simplicity
+- Amounts stored as **int64 (cents)** to avoid floating-point precision errors
 - Currency explicitly tracked per bill and line item
 - Conversion to USD for display (exchange rates configurable)
 
 ### Data Model
-- Bill - Contains status, currency, total amount, line items
-- LineItem - Description, amount, currency, timestamps
+- Bill - Contains status, currency, total amount (in cents), line items
+- LineItem - Description, amount (in cents), currency, timestamps
 
 ### Temporal Workflow
 - Workflow started when billing period begins
 - Progressive accrual of fees via signals
-- Automatic billing period end via timer
+- Automatic billing period end via timer (calls close API)
 - Queryable state for monitoring
 
 ### Why Temporal?
