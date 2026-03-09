@@ -1,9 +1,7 @@
 package workflow
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"time"
@@ -68,12 +66,11 @@ func BillingPeriodWorkflow(ctx workflow.Context, input BillingPeriodInput) error
 		now := workflow.Now(ctx)
 		state.ClosedAt = &now
 
-		// Call activity to close the bill via HTTP API
+		// Call activity to close the bill via HTTP API (needed for auto-close)
 		err := workflow.ExecuteActivity(ctx, CloseBillActivity, CloseBillActivityInput{
 			BillID: input.BillID,
 		}).Get(ctx, nil)
 		if err != nil {
-			// Log error but don't fail workflow - bill state is already closed
 			state.Status = "close-failed"
 		}
 	})
@@ -81,26 +78,14 @@ func BillingPeriodWorkflow(ctx workflow.Context, input BillingPeriodInput) error
 		var signalInput AddLineItemSignalInput
 		c.Receive(ctx, &signalInput)
 
-		// Execute activity to add line item
-		err := workflow.ExecuteActivity(ctx, AddLineItemActivity, ActivityInput{
-			BillID:   input.BillID,
-			Amount:   signalInput.Amount,
-			Currency: signalInput.Currency,
-		}).Get(ctx, nil)
-		if err == nil {
-			state.LineItemCount++
-			state.TotalAmount += signalInput.Amount
-		}
+		// Update workflow state - no need to call API since it was already processed
+		state.LineItemCount++
+		state.TotalAmount += signalInput.Amount
 	})
 	selector.AddReceive(closeBillChan, func(c workflow.ReceiveChannel, more bool) {
 		state.Status = "closed"
 		now := workflow.Now(ctx)
 		state.ClosedAt = &now
-
-		// Call activity to close the bill via HTTP API
-		_ = workflow.ExecuteActivity(ctx, CloseBillActivity, CloseBillActivityInput{
-			BillID: input.BillID,
-		}).Get(ctx, nil)
 	})
 
 	// Register query handler
@@ -118,14 +103,6 @@ func BillingPeriodWorkflow(ctx workflow.Context, input BillingPeriodInput) error
 
 // ============ Activities ============
 
-// ActivityInput represents input for activities
-type ActivityInput struct {
-	BillID      string  `json:"billId"`
-	Amount      float64 `json:"amount"`
-	Currency    string  `json:"currency"`
-	Description string  `json:"description"`
-}
-
 // CloseBillActivityInput represents input for closing a bill
 type CloseBillActivityInput struct {
 	BillID string `json:"billId"`
@@ -134,52 +111,19 @@ type CloseBillActivityInput struct {
 // API base URL - in production this would be configurable
 const apiBaseURL = "http://127.0.0.1:4000"
 
-// CreateBillingActivity creates a billing period (placeholder)
-func CreateBillingActivity(ctx context.Context, input ActivityInput) (string, error) {
-	return input.BillID, nil
-}
-
-// AddLineItemActivity adds a line item via HTTP API
-func AddLineItemActivity(ctx context.Context, input ActivityInput) error {
-	url := fmt.Sprintf("%s/bills/%s/items", apiBaseURL, input.BillID)
-	
-	payload := map[string]interface{}{
-		"description": input.Description,
-		"amount":      input.Amount,
-		"currency":    input.Currency,
-	}
-	
-	body, err := json.Marshal(payload)
-	if err != nil {
-		return err
-	}
-	
-	resp, err := http.Post(url, "application/json", bytes.NewReader(body))
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-	
-	if resp.StatusCode >= 400 {
-		return fmt.Errorf("API returned status %d", resp.StatusCode)
-	}
-	
-	return nil
-}
-
-// CloseBillActivity closes a bill via HTTP API
+// CloseBillActivity closes a bill via HTTP API (used for auto-close timer)
 func CloseBillActivity(ctx context.Context, input CloseBillActivityInput) error {
 	url := fmt.Sprintf("%s/bills/%s/close", apiBaseURL, input.BillID)
-	
+
 	resp, err := http.Post(url, "application/json", nil)
 	if err != nil {
 		return err
 	}
 	defer resp.Body.Close()
-	
+
 	if resp.StatusCode >= 400 {
 		return fmt.Errorf("API returned status %d", resp.StatusCode)
 	}
-	
+
 	return nil
 }
