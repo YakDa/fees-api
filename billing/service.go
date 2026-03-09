@@ -38,8 +38,6 @@ func initService() (*Service, error) {
 
 	// Register workflow and activities
 	w.RegisterWorkflow(workflow.BillingPeriodWorkflow)
-	w.RegisterActivity(workflow.CreateBillingActivity)
-	w.RegisterActivity(workflow.AddLineItemActivity)
 	w.RegisterActivity(workflow.CloseBillActivity)
 
 	// Start the worker
