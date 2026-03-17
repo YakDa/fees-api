@@ -1,6 +1,6 @@
 # Fees API
 
-A billing fees API built with **Encore** and **Temporal** for the Pave Bank coding challenge.
+A billing fees API built with **Encore** and **Temporal**.
 
 ## Tech Stack
 
